@@ -55,7 +55,7 @@ class CBOWModel(torch.nn.Module):
         embeds = self.embeddings(inputs)
         add_embeds = torch.sum(embeds, dim=1)
         out = self.linear1(add_embeds)
-        log_probs = F.log_softmax(out)
+        log_probs = F.log_softmax(out, dim=1)
         return log_probs
 
     def get_embeddings(self):

@@ -10,6 +10,7 @@ from torch.autograd import Variable
 from models import SkipGramModel
 from models import CBOWModel
 
+model_list = ['CBOW', 'skipgram']
 
 cmd_parser = argparse.ArgumentParser(description=None)
 # Data arguments
@@ -24,6 +25,8 @@ cmd_parser.add_argument('-pn', '--plot_num', default=100, type=int,
 cmd_parser.add_argument('-s', '--size', default=50000, type=int,
                         help='Vocabulary size.')
 # Model training arguments
+cmd_parser.add_argument('-m', '--mode', default='skipgram', choices=model_list,
+                        help='Training model.')
 cmd_parser.add_argument('-bs', '--batch_size', default=128, type=int,
                         help='Training batch size.')
 cmd_parser.add_argument('-ns', '--num_skips', default=2, type=int,
@@ -39,8 +42,6 @@ cmd_parser.add_argument('-i', '--num_steps', default=10000, type=int,
 cmd_parser.add_argument('-n', '--num_sampled', default=64, type=int,
                         help='Number of negative examples to sample.')
 
-
-# Read the data into a list of words.
 def read_data(filename):
     """Extract the first file enclosed in a zip file as a list of words."""
     if filename.endswith('.zip'):
@@ -79,14 +80,14 @@ def build_dataset(words, n_words):
 def generate_batch(data, data_index, batch_size, num_skips, skip_window):
     """Generates a batch of training data
         returns:
-            batch:      a list of data index for this batch.
-            labels:     a list of contexts indexes for this batch.
+            centers:      a list of center word indexes for this batch.
+            contexts:     a list of contexts indexes for this batch.
             data_index: current data index for next batch.
     """
     assert batch_size % num_skips == 0
     assert num_skips <= 2 * skip_window
-    batch = np.ndarray(shape=(batch_size), dtype=np.int32)
-    labels = np.ndarray(shape=(batch_size, 1), dtype=np.int32)
+    centers = np.ndarray(shape=(batch_size), dtype=np.int32)
+    contexts = np.ndarray(shape=(batch_size, 1), dtype=np.int32)
     span = 2 * skip_window + 1  # [ skip_window target skip_window ]
     buffer = collections.deque(maxlen=span)
     if data_index + span > len(data):
@@ -97,8 +98,8 @@ def generate_batch(data, data_index, batch_size, num_skips, skip_window):
         context_words = [w for w in range(span) if w != skip_window]
         words_to_use = random.sample(context_words, num_skips)
         for j, context_word in enumerate(words_to_use):
-            batch[i * num_skips + j] = buffer[skip_window]
-            labels[i * num_skips + j, 0] = buffer[context_word]
+            centers[i * num_skips + j] = buffer[skip_window]
+            contexts[i * num_skips + j, 0] = buffer[context_word]
         if data_index == len(data):
             for word in data[:span]:
                 buffer.append(word)
@@ -108,11 +109,15 @@ def generate_batch(data, data_index, batch_size, num_skips, skip_window):
             data_index += 1
     # Backtrack a little bit to avoid skipping words in the end of a batch
     data_index = (data_index + len(data) - span) % len(data)
-    return torch.LongTensor(batch), torch.LongTensor(labels), data_index
+    return torch.LongTensor(centers), torch.LongTensor(contexts), data_index
 
 
-def train(data, vocabulary_size, embedding_dim, batch_size, num_skips, skip_window, num_steps, learning_rate):
-    model = CBOWModel(vocabulary_size, embedding_dim)
+def train(data, mode, vocabulary_size, embedding_dim, batch_size, num_skips, skip_window, num_steps, learning_rate):
+    """Training and backpropagation process, returns final embedding as result"""
+    if mode == 'CBOW':
+        model = CBOWModel(vocabulary_size, embedding_dim)
+    else:
+        raise ValueError("Model \"%s\" not supported" % model)
     optimizer = torch.optim.SGD(
         model.parameters(), lr=learning_rate)
     data_index = 0
@@ -120,10 +125,16 @@ def train(data, vocabulary_size, embedding_dim, batch_size, num_skips, skip_wind
     loss_function = torch.nn.NLLLoss()
     for i in xrange(num_steps):
         # prepare feed data and forward pass
-        batch, labels, data_index = generate_batch(data, data_index,
+        centers, contexts, data_index = generate_batch(data, data_index,
             batch_size, num_skips, skip_window)
-        y_pred = model(labels)
-        loss = loss_function(y_pred, batch)
+        if mode == 'CBOW':
+            y_pred = model(contexts)
+            loss = loss_function(y_pred, centers)
+        elif mode == 'skipgram':
+            y_pred = model(centers)
+            loss = loss_function(y_pred, contexts)
+        else:
+            return
         # Zero gradients, perform a backward pass, and update the weights.
         optimizer.zero_grad()
         loss.backward()
@@ -131,13 +142,13 @@ def train(data, vocabulary_size, embedding_dim, batch_size, num_skips, skip_wind
         # Print loss value at certain step
         loss_val += loss.item()
         if i > 0 and i % (num_steps/100) == 0:
-            print('Average loss at step', i, ':', loss_val/(num_steps/100))
+            print('  Average loss at step', i, ':', loss_val/(num_steps/100))
             loss_val = 0
 
     return model.get_embeddings()
 
 
-def tsne_plot(embeddings, labels, num, reverse_dictionary, filename):
+def tsne_plot(embeddings, num, reverse_dictionary, filename):
     try:
         from sklearn.manifold import TSNE
         import matplotlib.pyplot as plt
@@ -159,7 +170,7 @@ def tsne_plot(embeddings, labels, num, reverse_dictionary, filename):
                      textcoords='offset points',
                      ha='right',
                      va='bottom')
-    print("saving plot to:", filename)
+    print("Saving plot to:", filename)
     plt.savefig(filename)
 
 if __name__ == '__main__':
@@ -173,6 +184,7 @@ if __name__ == '__main__':
     print('Vocabulary size', vocabulary_size)
     # Model training
     final_embeddings = train(data=data,
+                             mode=args.mode,
                              vocabulary_size=vocabulary_size,
                              embedding_dim=args.embedding_dim,
                              batch_size=args.batch_size,
@@ -184,7 +196,6 @@ if __name__ == '__main__':
     nomalized_embeddings = (final_embeddings/norm).numpy()
     # Save result and plotting
     tsne_plot(embeddings=nomalized_embeddings,
-              labels=labels,
               num=min(vocabulary_size, args.plot_num),
               reverse_dictionary=reverse_dictionary,
               filename=args.plot)
