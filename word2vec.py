@@ -116,13 +116,15 @@ def train(data, mode, vocabulary_size, embedding_dim, batch_size, num_skips, ski
     """Training and backpropagation process, returns final embedding as result"""
     if mode == 'CBOW':
         model = CBOWModel(vocabulary_size, embedding_dim)
+    elif mode == 'skipgram':
+        model = SkipGramModel(vocabulary_size, embedding_dim)
     else:
         raise ValueError("Model \"%s\" not supported" % model)
     optimizer = torch.optim.SGD(
         model.parameters(), lr=learning_rate)
+    loss_function = torch.nn.NLLLoss()
     data_index = 0
     loss_val = 0
-    loss_function = torch.nn.NLLLoss()
     for i in xrange(num_steps):
         # prepare feed data and forward pass
         centers, contexts, data_index = generate_batch(data, data_index,
@@ -131,10 +133,9 @@ def train(data, mode, vocabulary_size, embedding_dim, batch_size, num_skips, ski
             y_pred = model(contexts)
             loss = loss_function(y_pred, centers)
         elif mode == 'skipgram':
-            y_pred = model(centers)
-            loss = loss_function(y_pred, contexts)
+            loss = model(centers, contexts)
         else:
-            return
+            raise ValueError("Model \"%s\" not supported" % model)
         # Zero gradients, perform a backward pass, and update the weights.
         optimizer.zero_grad()
         loss.backward()
@@ -149,6 +150,7 @@ def train(data, mode, vocabulary_size, embedding_dim, batch_size, num_skips, ski
 
 
 def tsne_plot(embeddings, num, reverse_dictionary, filename):
+    """Plot tSNE result of embeddings for a subset of words"""
     try:
         from sklearn.manifold import TSNE
         import matplotlib.pyplot as plt
