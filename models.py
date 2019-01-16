@@ -5,8 +5,6 @@ import torch.nn.functional as F
 class SkipGramModel(torch.nn.Module):
     def __init__(self, vocabulary_size, embedding_dim):
         super(SkipGramModel, self).__init__()
-        self.vocabulary_size = vocabulary_size
-        self.embedding_dim = embedding_dim
         self.embeddings = torch.nn.Embedding(vocabulary_size, embedding_dim)
         initrange = 0.5 / embedding_dim
         self.embeddings.weight.data.uniform_(-initrange, initrange)
@@ -24,8 +22,6 @@ class SkipGramModel(torch.nn.Module):
 class CBOWModel(torch.nn.Module):
     def __init__(self, vocabulary_size, embedding_dim):
         super(CBOWModel, self).__init__()
-        self.vocabulary_size = vocabulary_size
-        self.embedding_dim = embedding_dim
         self.embeddings = torch.nn.Embedding(vocabulary_size, embedding_dim)
         initrange = 0.5 / embedding_dim
         self.embeddings.weight.data.uniform_(-initrange, initrange)
