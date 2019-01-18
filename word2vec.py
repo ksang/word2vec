@@ -9,6 +9,7 @@ import torch
 from torch.autograd import Variable
 from models import SkipGramModel
 from models import CBOWModel
+from inference import save_embeddings
 
 model_list = ['CBOW', 'skipgram']
 
@@ -16,8 +17,8 @@ cmd_parser = argparse.ArgumentParser(description=None)
 # Data arguments
 cmd_parser.add_argument('-d', '--data', default='data/text8.zip',
                         help='Data file for word2vec training.')
-cmd_parser.add_argument('-o', '--out', default='word2vec.json',
-                        help='Output filename.')
+cmd_parser.add_argument('-o', '--output', default='embeddings.bin',
+                        help='Output embeddings filename.')
 cmd_parser.add_argument('-p', '--plot', default='tsne.png',
                         help='Plotting output filename.')
 cmd_parser.add_argument('-pn', '--plot_num', default=100, type=int,
@@ -195,6 +196,7 @@ if __name__ == '__main__':
     norm = torch.sqrt(torch.cumsum(torch.mul(final_embeddings, final_embeddings), 1))
     nomalized_embeddings = (final_embeddings/norm).numpy()
     # Save result and plotting
+    save_embeddings(args.output, final_embeddings, dictionary)
     tsne_plot(embeddings=nomalized_embeddings,
               num=min(vocabulary_size, args.plot_num),
               reverse_dictionary=reverse_dictionary,

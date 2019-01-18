@@ -18,15 +18,16 @@ Training module also provides t-SNE plotting of a subset of vocabulary embedding
 
 ##### Training
 
-    usage: word2vec.py [-h] [-d DATA] [-o OUT] [-p PLOT] [-pn PLOT_NUM] [-s SIZE]
-                       [-m {CBOW,skipgram}] [-bs BATCH_SIZE] [-ns NUM_SKIPS]
-                       [-sw SKIP_WINDOW] [-ed EMBEDDING_DIM] [-lr LEARNING_RATE]
-                       [-i NUM_STEPS] [-n NUM_SAMPLED]
+    usage: word2vec.py [-h] [-d DATA] [-o OUTPUT] [-p PLOT] [-pn PLOT_NUM]
+                       [-s SIZE] [-m {CBOW,skipgram}] [-bs BATCH_SIZE]
+                       [-ns NUM_SKIPS] [-sw SKIP_WINDOW] [-ed EMBEDDING_DIM]
+                       [-lr LEARNING_RATE] [-i NUM_STEPS]
 
     optional arguments:
       -h, --help            show this help message and exit
       -d DATA, --data DATA  Data file for word2vec training.
-      -o OUT, --out OUT     Output filename.
+      -o OUTPUT, --output OUTPUT
+                            Output embeddings filename.
       -p PLOT, --plot PLOT  Plotting output filename.
       -pn PLOT_NUM, --plot_num PLOT_NUM
                             Plotting data number.
@@ -45,3 +46,17 @@ Training module also provides t-SNE plotting of a subset of vocabulary embedding
                             Learning rate
       -i NUM_STEPS, --num_steps NUM_STEPS
                             Number of steps to run.
+
+##### Inference
+
+    Python 3.6.5 (default, Jun 17 2018, 12:13:06)
+    [GCC 4.2.1 Compatible Apple LLVM 9.1.0 (clang-902.0.39.2)] on darwin
+    Type "help", "copyright", "credits" or "license" for more information.
+    >>> from inference import Word2Vec
+    >>> wv = Word2Vec()
+    >>> wv.from_file('embeddings.bin')
+    >>> wv.inference('is')
+    tensor([-0.8292,  0.3417, -0.3445, -0.6491, -0.3434,  1.0455,  0.1523, -1.1553])
+    >>> wv.inference('of')
+    tensor([-0.7774,  1.6229, -0.6826, -1.4431, -0.2579,  0.4803,  0.1727, -0.7641])
+    >>>
