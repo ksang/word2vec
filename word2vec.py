@@ -36,10 +36,12 @@ cmd_parser.add_argument('-sw', '--skip_window', default=1, type=int,
                         help='How many words to consider left and right.')
 cmd_parser.add_argument('-ed', '--embedding_dim', default=128, type=int,
                         help='Dimension of the embedding vector.')
-cmd_parser.add_argument('-lr', '--learning_rate', default=0.001, type=float,
+cmd_parser.add_argument('-lr', '--learning_rate', default=0.025, type=float,
                         help='Learning rate')
 cmd_parser.add_argument('-i', '--num_steps', default=10000, type=int,
                         help='Number of steps to run.')
+cmd_parser.add_argument('-ne', '--negative_example', default=5, type=int,
+                        help='Number of negative examples.')
 
 def read_data(filename):
     """Extract the first file enclosed in a zip file as a list of words."""
@@ -56,7 +58,7 @@ def build_dataset(words, n_words):
         Returns:
             data        list of codes (integers from 0 to vocabulary_size-1).
                         This is the original text but words are replaced by their codes
-            count       map of words(strings) to count of occurrences
+            count       list of words(strings) to count of occurrences
             dictionary  map of words(strings) to their codes(integers)
             reverse_dictionary  maps codes(integers) to words(strings)
     """
@@ -111,12 +113,13 @@ def generate_batch(data, data_index, batch_size, num_skips, skip_window):
     return torch.LongTensor(centers), torch.LongTensor(contexts), data_index
 
 
-def train(data, mode, vocabulary_size, embedding_dim, batch_size, num_skips, skip_window, num_steps, learning_rate):
+def train(data, word_count, mode, vocabulary_size, embedding_dim, batch_size,
+          num_skips, skip_window, num_steps, learning_rate, neg_num):
     """Training and backpropagation process, returns final embedding as result"""
     if mode == 'CBOW':
         model = CBOWModel(vocabulary_size, embedding_dim)
     elif mode == 'skipgram':
-        model = SkipGramModel(vocabulary_size, embedding_dim)
+        model = SkipGramModel(vocabulary_size, embedding_dim, neg_num, word_count)
     else:
         raise ValueError("Model \"%s\" not supported" % model)
     optimizer = torch.optim.SGD(
@@ -183,8 +186,10 @@ if __name__ == '__main__':
                                                                 args.size)
     vocabulary_size = min(args.size, len(count))
     print('Vocabulary size', vocabulary_size)
+    word_count = [ c[1] for c in count]
     # Model training
     final_embeddings = train(data=data,
+                             word_count=word_count,
                              mode=args.mode,
                              vocabulary_size=vocabulary_size,
                              embedding_dim=args.embedding_dim,
@@ -192,7 +197,8 @@ if __name__ == '__main__':
                              num_skips=args.num_skips,
                              skip_window=args.skip_window,
                              num_steps=args.num_steps,
-                             learning_rate=args.learning_rate)
+                             learning_rate=args.learning_rate,
+                             neg_num=args.negative_example)
     norm = torch.sqrt(torch.cumsum(torch.mul(final_embeddings, final_embeddings), 1))
     nomalized_embeddings = (final_embeddings/norm).numpy()
     # Save result and plotting

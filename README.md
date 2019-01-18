@@ -21,7 +21,7 @@ Training module also provides t-SNE plotting of a subset of vocabulary embedding
     usage: word2vec.py [-h] [-d DATA] [-o OUTPUT] [-p PLOT] [-pn PLOT_NUM]
                        [-s SIZE] [-m {CBOW,skipgram}] [-bs BATCH_SIZE]
                        [-ns NUM_SKIPS] [-sw SKIP_WINDOW] [-ed EMBEDDING_DIM]
-                       [-lr LEARNING_RATE] [-i NUM_STEPS]
+                       [-lr LEARNING_RATE] [-i NUM_STEPS] [-ne NEGATIVE_EXAMPLE]
 
     optional arguments:
       -h, --help            show this help message and exit
@@ -46,6 +46,8 @@ Training module also provides t-SNE plotting of a subset of vocabulary embedding
                             Learning rate
       -i NUM_STEPS, --num_steps NUM_STEPS
                             Number of steps to run.
+      -ne NEGATIVE_EXAMPLE, --negative_example NEGATIVE_EXAMPLE
+                            Number of negative examples.
 
 ##### Inference
 
