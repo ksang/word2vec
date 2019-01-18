@@ -39,8 +39,6 @@ cmd_parser.add_argument('-lr', '--learning_rate', default=0.001, type=float,
                         help='Learning rate')
 cmd_parser.add_argument('-i', '--num_steps', default=10000, type=int,
                         help='Number of steps to run.')
-cmd_parser.add_argument('-n', '--num_sampled', default=64, type=int,
-                        help='Number of negative examples to sample.')
 
 def read_data(filename):
     """Extract the first file enclosed in a zip file as a list of words."""

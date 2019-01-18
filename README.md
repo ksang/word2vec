@@ -10,6 +10,10 @@ The motivation of this project is to provide meaningful semantic and syntactic i
 
 [figure source](http://www.cs.nthu.edu.tw/~shwu/courses/ml/labs/10_Keras_Word2Vec/10_Keras_Word2Vec.html)
 
+Training module also provides t-SNE plotting of a subset of vocabulary embeddings, an example of plotting:
+
+![tsne](/imgs/tsne.png "tsne")
+
 ### Usage
 
 ##### Training
@@ -41,5 +45,3 @@ The motivation of this project is to provide meaningful semantic and syntactic i
                             Learning rate
       -i NUM_STEPS, --num_steps NUM_STEPS
                             Number of steps to run.
-      -n NUM_SAMPLED, --num_sampled NUM_SAMPLED
-                            Number of negative examples to sample.
