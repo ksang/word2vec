@@ -21,8 +21,9 @@ class SkipGramModel(torch.nn.Module):
     """ Center word as input, context words as target.
         Objective is to maximize the score of map from input to target.
     """
-    def __init__(self, vocabulary_size, embedding_dim, neg_num=0, word_count=[]):
+    def __init__(self, device, vocabulary_size, embedding_dim, neg_num=0, word_count=[]):
         super(SkipGramModel, self).__init__()
+        self.device = device
         self.neg_num = neg_num
         self.embeddings = torch.nn.Embedding(vocabulary_size, embedding_dim)
         initrange = 0.5 / embedding_dim
@@ -37,7 +38,7 @@ class SkipGramModel(torch.nn.Module):
         score  = torch.bmm(u_embeds, v_embeds.transpose(1,2)).squeeze()
         loss = F.logsigmoid(score).squeeze()
         if self.neg_num > 0:
-            neg_contexts = torch.LongTensor(np.random.choice(self.table, size=(batch_size, self.neg_num)))
+            neg_contexts = torch.LongTensor(np.random.choice(self.table, size=(batch_size, self.neg_num))).to(self.device)
             neg_v_embeds = self.embeddings(neg_contexts)
             neg_score = torch.bmm(u_embeds, neg_v_embeds.transpose(1,2)).squeeze()
             neg_score = torch.sum(neg_score, dim=1)
@@ -52,8 +53,9 @@ class CBOWModel(torch.nn.Module):
     """ Context words as input, returns possiblity distribution
         prediction of center word (target).
     """
-    def __init__(self, vocabulary_size, embedding_dim):
+    def __init__(self, device, vocabulary_size, embedding_dim):
         super(CBOWModel, self).__init__()
+        self.device = device
         self.embeddings = torch.nn.Embedding(vocabulary_size, embedding_dim)
         initrange = 0.5 / embedding_dim
         self.embeddings.weight.data.uniform_(-initrange, initrange)

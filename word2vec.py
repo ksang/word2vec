@@ -6,6 +6,7 @@ import numpy as np
 from six.moves import xrange
 import random
 import torch
+import timeit
 from torch.autograd import Variable
 from models import SkipGramModel
 from models import CBOWModel
@@ -42,6 +43,9 @@ cmd_parser.add_argument('-i', '--num_steps', default=10000, type=int,
                         help='Number of steps to run.')
 cmd_parser.add_argument('-ne', '--negative_example', default=5, type=int,
                         help='Number of negative examples.')
+# Device
+cmd_parser.add_argument('-dc', '--disable_cuda', default=False, action='store_true',
+                        help='Explicitly disable cuda and GPU.')
 
 def read_data(filename):
     """Extract the first file enclosed in a zip file as a list of words."""
@@ -78,7 +82,7 @@ def build_dataset(words, n_words):
     reversed_dictionary = dict(zip(dictionary.values(), dictionary.keys()))
     return data, count, dictionary, reversed_dictionary
 
-def generate_batch(data, data_index, batch_size, num_skips, skip_window):
+def generate_batch(device, data, data_index, batch_size, num_skips, skip_window):
     """Generates a batch of training data
         returns:
             centers:      a list of center word indexes for this batch.
@@ -110,18 +114,30 @@ def generate_batch(data, data_index, batch_size, num_skips, skip_window):
             data_index += 1
     # Backtrack a little bit to avoid skipping words in the end of a batch
     data_index = (data_index + len(data) - span) % len(data)
-    return torch.LongTensor(centers), torch.LongTensor(contexts), data_index
+    centers = torch.LongTensor(centers).to(device)
+    contexts = torch.LongTensor(contexts).to(device)
+    return centers, contexts, data_index
 
+def get_deivice(disable_cuda):
+    """Get CPU/GPU device
+    """
+    if not disable_cuda and torch.cuda.is_available():
+        device = torch.device('cuda')
+    else:
+        device = torch.device('cpu')
+    return device
 
-def train(data, word_count, mode, vocabulary_size, embedding_dim, batch_size,
-          num_skips, skip_window, num_steps, learning_rate, neg_num):
+def train(device, data, word_count, mode, vocabulary_size, embedding_dim,
+          batch_size, num_skips, skip_window, num_steps, learning_rate, neg_num):
     """Training and backpropagation process, returns final embedding as result"""
     if mode == 'CBOW':
-        model = CBOWModel(vocabulary_size, embedding_dim)
+        model = CBOWModel(device, vocabulary_size, embedding_dim)
     elif mode == 'skipgram':
-        model = SkipGramModel(vocabulary_size, embedding_dim, neg_num, word_count)
+        model = SkipGramModel(device, vocabulary_size, embedding_dim, neg_num, word_count)
     else:
         raise ValueError("Model \"%s\" not supported" % model)
+    model.to(device)
+    print("Start training on device:", device)
     optimizer = torch.optim.SGD(
         model.parameters(), lr=learning_rate)
     loss_function = torch.nn.NLLLoss()
@@ -129,8 +145,8 @@ def train(data, word_count, mode, vocabulary_size, embedding_dim, batch_size,
     loss_val = 0
     for i in xrange(num_steps):
         # prepare feed data and forward pass
-        centers, contexts, data_index = generate_batch(data, data_index,
-            batch_size, num_skips, skip_window)
+        centers, contexts, data_index = generate_batch(device, data, data_index,
+                                                       batch_size, num_skips, skip_window)
         if mode == 'CBOW':
             y_pred = model(contexts)
             loss = loss_function(y_pred, centers)
@@ -179,6 +195,7 @@ def tsne_plot(embeddings, num, reverse_dictionary, filename):
 
 if __name__ == '__main__':
     args = cmd_parser.parse_args()
+    dev = get_deivice(args.disable_cuda)
     # Data preprocessing
     vocabulary = read_data(args.data)
     print('Data size', len(vocabulary))
@@ -188,7 +205,9 @@ if __name__ == '__main__':
     print('Vocabulary size', vocabulary_size)
     word_count = [ c[1] for c in count]
     # Model training
-    final_embeddings = train(data=data,
+    start_time = timeit.default_timer()
+    final_embeddings = train(device=dev,
+                             data=data,
                              word_count=word_count,
                              mode=args.mode,
                              vocabulary_size=vocabulary_size,
@@ -199,8 +218,9 @@ if __name__ == '__main__':
                              num_steps=args.num_steps,
                              learning_rate=args.learning_rate,
                              neg_num=args.negative_example)
+    print('Training time:', timeit.default_timer() - start_time, 'Seconds')
     norm = torch.sqrt(torch.cumsum(torch.mul(final_embeddings, final_embeddings), 1))
-    nomalized_embeddings = (final_embeddings/norm).numpy()
+    nomalized_embeddings = (final_embeddings/norm).cpu().numpy()
     # Save result and plotting
     save_embeddings(args.output, final_embeddings, dictionary)
     tsne_plot(embeddings=nomalized_embeddings,
