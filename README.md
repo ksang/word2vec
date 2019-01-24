@@ -4,7 +4,9 @@
 
 Word2vec is a group of related models that are used to produce word embeddings. You may find original paper [here](https://papers.nips.cc/paper/5021-distributed-representations-of-words-and-phrases-and-their-compositionality.pdf).
 
-The motivation of this project is to provide meaningful semantic and syntactic information as reinforcement learning observations when playing text based games.  In this project, two models: CBOW and Skipgram are implemented using pytorch.
+The motivation of this project is to provide meaningful semantic and syntactic information as reinforcement learning observations when playing text based games.  
+
+In this project, two models: CBOW and Skipgram are implemented using pytorch.
 
 ![model archtecture](/imgs/model.jpg "model")
 
@@ -22,6 +24,7 @@ Training module also provides t-SNE plotting of a subset of vocabulary embedding
                        [-s SIZE] [-m {CBOW,skipgram}] [-bs BATCH_SIZE]
                        [-ns NUM_SKIPS] [-sw SKIP_WINDOW] [-ed EMBEDDING_DIM]
                        [-lr LEARNING_RATE] [-i NUM_STEPS] [-ne NEGATIVE_EXAMPLE]
+                       [-dc]
 
     optional arguments:
       -h, --help            show this help message and exit
@@ -48,6 +51,7 @@ Training module also provides t-SNE plotting of a subset of vocabulary embedding
                             Number of steps to run.
       -ne NEGATIVE_EXAMPLE, --negative_example NEGATIVE_EXAMPLE
                             Number of negative examples.
+      -dc, --disable_cuda   Explicitly disable cuda and GPU.
 
 ##### Inference
 
