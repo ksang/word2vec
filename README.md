@@ -51,6 +51,7 @@ Training module also provides t-SNE plotting of a subset of vocabulary embedding
                             Number of steps to run.
       -ne NEGATIVE_EXAMPLE, --negative_example NEGATIVE_EXAMPLE
                             Number of negative examples.
+      -c CLIP, --clip CLIP  Clip gradient norm value.
       -dc, --disable_cuda   Explicitly disable cuda and GPU.
 
 ##### Inference

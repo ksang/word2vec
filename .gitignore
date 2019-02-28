@@ -106,3 +106,7 @@ venv.bak/
 # ctags
 .tags
 .tags1
+
+# outputs
+tsne.png
+embeddings.bin

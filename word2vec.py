@@ -37,12 +37,15 @@ cmd_parser.add_argument('-sw', '--skip_window', default=1, type=int,
                         help='How many words to consider left and right.')
 cmd_parser.add_argument('-ed', '--embedding_dim', default=128, type=int,
                         help='Dimension of the embedding vector.')
-cmd_parser.add_argument('-lr', '--learning_rate', default=0.025, type=float,
+cmd_parser.add_argument('-lr', '--learning_rate', default=0.001, type=float,
                         help='Learning rate')
 cmd_parser.add_argument('-i', '--num_steps', default=10000, type=int,
                         help='Number of steps to run.')
 cmd_parser.add_argument('-ne', '--negative_example', default=5, type=int,
                         help='Number of negative examples.')
+cmd_parser.add_argument('-c', '--clip', default=1.0, type=float,
+                        help='Clip gradient norm value.')
+
 # Device
 cmd_parser.add_argument('-dc', '--disable_cuda', default=False, action='store_true',
                         help='Explicitly disable cuda and GPU.')
@@ -127,8 +130,8 @@ def get_deivice(disable_cuda):
         device = torch.device('cpu')
     return device
 
-def train(device, data, word_count, mode, vocabulary_size, embedding_dim,
-          batch_size, num_skips, skip_window, num_steps, learning_rate, neg_num):
+def train(device, data, word_count, mode, vocabulary_size, embedding_dim, batch_size,
+          num_skips, skip_window, num_steps, learning_rate, neg_num, clip):
     """Training and backpropagation process, returns final embedding as result"""
     if mode == 'CBOW':
         model = CBOWModel(device, vocabulary_size, embedding_dim)
@@ -138,7 +141,7 @@ def train(device, data, word_count, mode, vocabulary_size, embedding_dim,
         raise ValueError("Model \"%s\" not supported" % model)
     model.to(device)
     print("Start training on device:", device)
-    optimizer = torch.optim.SGD(
+    optimizer = torch.optim.Adam(
         model.parameters(), lr=learning_rate)
     loss_function = torch.nn.NLLLoss()
     data_index = 0
@@ -157,6 +160,7 @@ def train(device, data, word_count, mode, vocabulary_size, embedding_dim,
         # Zero gradients, perform a backward pass, and update the weights.
         optimizer.zero_grad()
         loss.backward()
+        torch.nn.utils.clip_grad_norm_(model.parameters(), clip)
         optimizer.step()
         # Print loss value at certain step
         loss_val += loss.item()
@@ -217,6 +221,7 @@ if __name__ == '__main__':
                              skip_window=args.skip_window,
                              num_steps=args.num_steps,
                              learning_rate=args.learning_rate,
+                             clip=args.clip,
                              neg_num=args.negative_example)
     print('Training time:', timeit.default_timer() - start_time, 'Seconds')
     norm = torch.sqrt(torch.cumsum(torch.mul(final_embeddings, final_embeddings), 1))
